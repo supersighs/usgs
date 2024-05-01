@@ -8,38 +8,64 @@ import (
 
 type (
 	Station struct {
+		Id       string
+		Readings []Reading
+	}
+
+	Reading struct {
 		Id    string
+		Title string
 		Value string
+		Unit  string
 	}
 )
 
-func GetStations(stationIds []string) []Station {
-	fmt.Sprintf("Getting data for %v", strings.Join(stationIds, ","))
-	url := "https://waterservices.usgs.gov/nwis/iv/?format=waterml,2.0&sites=03377500,03378500&indent=on&siteStatus=all&siteType=ST"
-	feed := GetFeed(url)
-	for _, member := range feed.Members {
-		fmt.Println(member.Name)
-		for _, observation := range member.Observations {
-			fmt.Println(observation)
-		}
-	}
-
-	return mapToStations(feed)
+func (reading Reading) String() string {
+	return fmt.Sprintf("%v: %v %v", reading.Title, reading.Value, reading.Unit)
 }
 
-func mapToStations(feed Feed) (stations []Station) {
+func (station Station) String() string {
+	readings := make([]string, len(station.Readings))
+	for i, reading := range station.Readings {
+		readings[i] = reading.String()
+	}
+	return fmt.Sprintf("Station %v\n%v", station.Id, strings.Join(readings, "\n"))
+}
+
+func GetStations(stationIds []string) []Station {
+	stations := strings.Join(stationIds, ",")
+	url := fmt.Sprintf("https://waterservices.usgs.gov/nwis/iv/?format=waterml,2.0&sites=%v&siteStatus=all&siteType=ST", stations)
+	feed := GetFeed(url)
+
+	return feed.ToStations()
+}
+
+func (feed Feed) ToStations() (stations []Station) {
 	for _, member := range feed.Members {
-		for _, observation := range member.Observations {
-			stations = append(stations, fromObservation(observation))
-		}
+		stations = append(stations, member.AsStation())
 	}
 	return
 }
 
-// maybe use a pointer here?
-func fromObservation(obs Observation) Station {
+func (observation Observation) AsReading() Reading {
+	return Reading{
+		Id:    observation.Id,
+		Title: observation.ObservedProperty.Title,
+		Value: observation.Value,
+		Unit:  observation.Unit.UnitName,
+	}
+}
+
+func (member Member) AsStation() Station {
+
+	readings := make([]Reading, len(member.Observations))
+
+	for i, obs := range member.Observations {
+		readings[i] = obs.AsReading()
+	}
+
 	return Station{
-		Id:    obs.ObservedProperty.Title,
-		Value: obs.Value,
+		Id:       member.Id,
+		Readings: readings,
 	}
 }

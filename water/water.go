@@ -2,7 +2,6 @@ package water
 
 import (
 	"encoding/xml"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -26,6 +25,7 @@ type (
 	}
 
 	Observation struct {
+		Id               string           `xml:"id,attr"`
 		ResultTime       string           `xml:"resultTime>TimeInstant>timePosition"`
 		Unit             UnitOfMeasure    `xml:"result>MeasurementTimeseries>defaultPointMetadata>DefaultTVPMeasurementMetadata>uom"`
 		Value            string           `xml:"result>MeasurementTimeseries>point>MeasurementTVP>value"`
@@ -42,20 +42,7 @@ type (
 	}
 )
 
-func (m Member) String() string {
-	return fmt.Sprintf("Member id=%v, name=%v, observations=%v", m.Id, m.Name, len(m.Observations))
-}
-
-func (f Feed) String() string {
-	return fmt.Sprintf("Feed id=%v memberCount=%v", f.Id, len(f.Members))
-}
-
-func (o Observation) String() string {
-	return fmt.Sprintf("Observation title=%v time=%v unit=%v value=%v", o.ObservedProperty.Title, o.ResultTime, o.Unit.UnitName, o.Value)
-}
-
 func GetFeed(url string) Feed {
-	fmt.Println("Getting feed")
 
 	client := http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
@@ -65,7 +52,15 @@ func GetFeed(url string) Feed {
 	}
 
 	res, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	result := Feed{}
 	xmlErr := xml.Unmarshal(body, &result)
 
