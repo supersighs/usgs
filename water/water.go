@@ -2,9 +2,11 @@ package water
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type (
@@ -28,7 +30,7 @@ type (
 		Id               string           `xml:"id,attr"`
 		ResultTime       string           `xml:"resultTime>TimeInstant>timePosition"`
 		Unit             UnitOfMeasure    `xml:"result>MeasurementTimeseries>defaultPointMetadata>DefaultTVPMeasurementMetadata>uom"`
-		Value            string           `xml:"result>MeasurementTimeseries>point>MeasurementTVP>value"`
+		Value            float64          `xml:"result>MeasurementTimeseries>point>MeasurementTVP>value"`
 		ObservedProperty ObservedProperty `xml:"observedProperty"`
 		Position         string           `xml:"featureOfInterest>SF_SpatialSamplingFeature>shape>Point>pos"`
 	}
@@ -42,7 +44,40 @@ type (
 	}
 )
 
-func GetFeed(url string) Feed {
+const (
+	sitesUrl = "https://waterservices.usgs.gov/nwis/iv/?format=waterml,2.0&sites=%v&siteStatus=all&siteType=ST"
+)
+
+func (feed Feed) GetMember(id string) (station Member) {
+	for _, station = range feed.Members {
+		if strings.Contains(station.Id, id) {
+			return
+		}
+	}
+	return
+}
+
+func (station Member) GetMember(id string) (reading Observation, err error) {
+	for _, reading = range station.Observations {
+		if strings.Contains(reading.Id, id) {
+			return reading, nil
+		}
+	}
+	return Observation{}, fmt.Errorf("Reading not found")
+}
+
+func GetFeed(siteIds []string) Feed {
+	// convert the station ids to a comma separated string
+	stations := strings.Join(siteIds, ",")
+	// create the url
+	url := fmt.Sprintf(sitesUrl, stations)
+	// get the feed
+	feed := getFeed(url)
+	// convert the feed to stations
+	return feed
+}
+
+func getFeed(url string) (feed Feed) {
 
 	client := http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
@@ -61,12 +96,11 @@ func GetFeed(url string) Feed {
 		log.Fatal(err)
 	}
 
-	result := Feed{}
-	xmlErr := xml.Unmarshal(body, &result)
+	xmlErr := xml.Unmarshal(body, &feed)
 
 	if xmlErr != nil {
 		log.Fatal(xmlErr)
 	}
 
-	return result
+	return
 }

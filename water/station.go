@@ -1,12 +1,13 @@
 package water
 
 import (
-	//"encoding/xml"
 	"fmt"
 	"strings"
 )
 
 type (
+	Stations []Station
+
 	Station struct {
 		Id       string
 		Readings []Reading
@@ -15,36 +16,39 @@ type (
 	Reading struct {
 		Id    string
 		Title string
-		Value string
+		Value float64
 		Unit  string
 	}
 )
 
-func (reading Reading) String() string {
-	return fmt.Sprintf("%v: %v %v", reading.Title, reading.Value, reading.Unit)
-}
-
-func (station Station) String() string {
-	readings := make([]string, len(station.Readings))
-	for i, reading := range station.Readings {
-		readings[i] = reading.String()
+// GetStation returns a Station from a list of Stations by id
+func (stations Stations) GetStation(id string) Station {
+	for _, station := range stations {
+		if strings.Contains(station.Id, id) {
+			return station
+		}
 	}
-	return fmt.Sprintf("Station %v\n%v", station.Id, strings.Join(readings, "\n"))
+	return Station{}
 }
 
-func GetStations(stationIds []string) []Station {
+func GetStations(stationIds []string) Stations {
+	// convert the station ids to a comma separated string
 	stations := strings.Join(stationIds, ",")
-	url := fmt.Sprintf("https://waterservices.usgs.gov/nwis/iv/?format=waterml,2.0&sites=%v&siteStatus=all&siteType=ST", stations)
-	feed := GetFeed(url)
-
+	// create the url
+	url := fmt.Sprintf(sitesUrl, stations)
+	// get the feed
+	feed := getFeed(url)
+	// convert the feed to stations
 	return feed.ToStations()
 }
 
-func (feed Feed) ToStations() (stations []Station) {
-	for _, member := range feed.Members {
-		stations = append(stations, member.AsStation())
+func (station Station) GetReading(id string) Reading {
+	for _, reading := range station.Readings {
+		if strings.Contains(reading.Id, id) {
+			return reading
+		}
 	}
-	return
+	return Reading{}
 }
 
 func (observation Observation) AsReading() Reading {
@@ -54,6 +58,13 @@ func (observation Observation) AsReading() Reading {
 		Value: observation.Value,
 		Unit:  observation.Unit.UnitName,
 	}
+}
+
+func (feed Feed) ToStations() (stations []Station) {
+	for _, member := range feed.Members {
+		stations = append(stations, member.AsStation())
+	}
+	return
 }
 
 func (member Member) AsStation() Station {

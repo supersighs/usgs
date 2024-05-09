@@ -1,4 +1,4 @@
-package usgs
+package usgr
 
 import (
 	"encoding/json"
