@@ -62,29 +62,34 @@ func (station Member) GetMember(id string) (reading Observation, err error) {
 	return Observation{}, fmt.Errorf("Reading not found")
 }
 
-func getFeed(url string) (feed Feed) {
+func getFeed(url string) (feed Feed, err error) {
 
 	client := http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 
+	// todo: defer these errors
 	if err != nil {
 		log.Fatal(err)
+		return Feed{}, err
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
+		return Feed{}, err
 	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Fatal(err)
+		return Feed{}, err
 	}
 
 	xmlErr := xml.Unmarshal(body, &feed)
 
 	if xmlErr != nil {
 		log.Fatal(xmlErr)
+		return Feed{}, xmlErr
 	}
 
 	return
