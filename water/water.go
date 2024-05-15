@@ -19,6 +19,7 @@ type (
 		Members        []Member `xml:"featureMember>Collection"`
 	}
 
+	// Member represents a single monitoring station
 	Member struct {
 		Id           string        `xml:"identifier"`
 		Name         string        `xml:"name"`
@@ -26,13 +27,29 @@ type (
 		Observations []Observation `xml:"observationMember>OM_Observation"`
 	}
 
+	// Observation represents a single observation from a monitoring station
 	Observation struct {
-		Id               string           `xml:"id,attr"`
-		ResultTime       string           `xml:"resultTime>TimeInstant>timePosition"`
-		Unit             UnitOfMeasure    `xml:"result>MeasurementTimeseries>defaultPointMetadata>DefaultTVPMeasurementMetadata>uom"`
-		Value            float64          `xml:"result>MeasurementTimeseries>point>MeasurementTVP>value"`
-		ObservedProperty ObservedProperty `xml:"observedProperty"`
-		Position         string           `xml:"featureOfInterest>SF_SpatialSamplingFeature>shape>Point>pos"`
+		Id                string            `xml:"id,attr"`
+		ResultTime        string            `xml:"resultTime>TimeInstant>timePosition"`
+		Unit              UnitOfMeasure     `xml:"result>MeasurementTimeseries>defaultPointMetadata>DefaultTVPMeasurementMetadata>uom"`
+		Value             float64           `xml:"result>MeasurementTimeseries>point>MeasurementTVP>value"`
+		ObservedProperty  ObservedProperty  `xml:"observedProperty"`
+		FeatureOfInterest FeatureOfInterest `xml:"featureOfInterest"`
+	}
+
+	// FeatureOfInterest represents the location of the observation
+	FeatureOfInterest struct {
+		Title           string          `xml:"title,attr"`
+		MonitoringPoint MonitoringPoint `xml:"MonitoringPoint"`
+	}
+
+	MonitoringPoint struct {
+		Id string `xml:"id,attr"`
+	}
+
+	// Shape represents the location of the monitoring point
+	Shape struct {
+		Position string `xml:"shape>point>pos"`
 	}
 
 	UnitOfMeasure struct {
@@ -53,13 +70,13 @@ func (feed Feed) GetMember(id string) (station Member) {
 	return
 }
 
-func (station Member) GetMember(id string) (reading Observation, err error) {
-	for _, reading = range station.Observations {
-		if strings.Contains(reading.Id, id) {
-			return reading, nil
+func (member Member) GetObservation(id string) (observation Observation, err error) {
+	for _, observation = range member.Observations {
+		if strings.Contains(observation.Id, id) {
+			return observation, nil
 		}
 	}
-	return Observation{}, fmt.Errorf("Reading not found")
+	return Observation{}, fmt.Errorf("Observation not found")
 }
 
 func getFeed(url string) (feed Feed, err error) {
