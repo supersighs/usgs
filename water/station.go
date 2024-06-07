@@ -13,6 +13,7 @@ func GetStations(siteIds []string) (Feed, error) {
 	// convert the station ids to a comma separated string
 	stations := strings.Join(siteIds, ",")
 	// create the url
+
 	url := fmt.Sprintf(sitesUrl, stations)
 	// get the feed
 	feed, err := getFeed(url)
